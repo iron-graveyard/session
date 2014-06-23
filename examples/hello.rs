@@ -1,11 +1,11 @@
 extern crate iron;
-extern crate hello;
+extern crate session;
 
 use std::io::net::ip::Ipv4Addr;
 
 use iron::{Iron, ServerT};
 
-use hello::HelloWorld;
+use session::HelloWorld;
 
 fn main() {
     let mut server: ServerT = Iron::new();

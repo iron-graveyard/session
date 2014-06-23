@@ -1,4 +1,4 @@
-#![crate_id = "hello"]
+#![crate_id = "session"]
 #![deny(missing_doc)]
 #![feature(phase)]
 

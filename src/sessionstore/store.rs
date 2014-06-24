@@ -1,11 +1,12 @@
 use std::sync::Arc;
-use std::sync::RWLock;
+use std::sync::{RWLock, RWLockReadGuard};
 use std::collections::HashMap;
 use collections::hash::Hash;
 use core::cmp::Eq;
 use super::SessionStore;
 
 type Store<K, V> = RWLock<HashMap<K, RWLock<V>>>;
+pub type StoreLock<'a, K, V> = RWLockReadGuard<'a, HashMap<K, RWLock<V>>>;
 
 pub struct Session<K, V>{
     key: Option<K>,
@@ -30,38 +31,50 @@ impl<K: Hash + Eq + Send + Share, V: Send + Share> Session<K, V> {
     }
 }
 
+/* A note on clones:
+ *
+ * Those values hidden behind a RWLock are owned behind that lock.
+ * In order for them to be accessed, a reference to the two gating locks
+ * (the HashMap and the keyed V) must be kept alive.
+ *
+ * Instead, all values returned are copies.
+ */
 impl<K: Hash + Eq + Send + Share + Clone, V: Send + Share + Clone> SessionStore<K, V> for Session<K, V> {
     fn set_key(&mut self, key: K) { self.key = Some(key); }
     fn insert(&self, val: V) {
-        let key = self.key.clone().unwrap();
+        let key = self.key.as_ref().unwrap();
         // Avoid a WriteLock if possible
-        if !self.store.read().contains_key(&key) {
-            self.store.write().insert(key, RWLock::new(val));
+        if !self.store.read().contains_key(key) {
+            // Inserting consumes a key => clone()
+            self.store.write().insert(key.clone(), RWLock::new(val));
         }
     }
     fn find(&self) -> Option<V> {
-        let key = self.key.clone().unwrap();
-        match self.store.read().find(&key) {
+        let key = self.key.as_ref().unwrap();
+        match self.store.read().find(key) {
             Some(lock) => Some(lock.read().clone()),
             None => None
         }
     }
-    fn swap(&self, new_value: V) -> Option<V> {
-        let key = self.key.clone().unwrap();
-        match self.store.read().find(&key) {
+    fn swap(&self, value: V) -> Option<V> {
+        let key = self.key.as_ref().unwrap();
+        match self.store.read().find(key) {
+            // Instead of using swap, which requires a write lock on the HashMap,
+            // only take the write locks when the key does not yet exist
             Some(lock) => {
-                *lock.write() = new_value;
-                Some(lock.read().clone())
+                let old_v = lock.read().clone();
+                *lock.write() = value;
+                Some(old_v)
             },
             None       => {
-                self.insert(new_value);
+                self.insert(value);
                 None
             }
         }
     }
     fn upsert(&self, value: V, mutator: |&mut V|) -> V {
-        let key = self.key.clone().unwrap();
-        match self.store.read().find(&key) {
+        let key = self.key.as_ref().unwrap();
+        match self.store.read().find(key) {
             Some(lock) => {
                 let old_v = &mut *lock.write();
                 mutator(old_v);
@@ -74,7 +87,7 @@ impl<K: Hash + Eq + Send + Share + Clone, V: Send + Share + Clone> SessionStore<
         }
     }
     fn remove(&self) -> bool {
-        let key = self.key.clone().unwrap();
-        self.store.write().remove(&key)
+        let key = self.key.as_ref().unwrap();
+        self.store.write().remove(key)
     }
 }

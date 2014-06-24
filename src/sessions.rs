@@ -31,8 +31,7 @@ impl<K, V, S: SessionStore<K, V> + Clone> Middleware for Sessions<K, V, S> {
     fn enter(&mut self, req: &mut Request, _: &mut Response,
              alloy: &mut Alloy) -> Status {
         // Generate and store the key for this session
-        let key = (self.key_generator)(req, alloy);
-        self.session_store.set_key(key);
+        self.session_store.set_key((self.key_generator)(req, alloy));
 
         // Add _all_ session store to the alloy
         //     Anything added to the alloy must fulfill 'static,

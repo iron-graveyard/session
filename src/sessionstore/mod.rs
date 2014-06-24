@@ -1,10 +1,9 @@
 //! This module defines the trait necessary for a session storage struct.
-///!
-///! A default implementation can be found in the `store` module: `Session`.
 
+/// A default implementation of `SessionStore`: `Session`.
 pub mod store;
 
-/// This trait must be implemented for any session storage struct.
+/// This `Trait` defines a session storage struct. It must be implemented on any store passed to `Sessions`.
 ///
 /// A key is set using `set_key` when the `Session` middleware is first called.
 ///

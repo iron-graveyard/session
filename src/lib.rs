@@ -1,5 +1,5 @@
 #![crate_id = "session"]
-#![deny(missing_doc)]
+// #![deny(missing_doc)]
 #![feature(phase)]
 #![feature(globs)]
 
@@ -16,7 +16,8 @@ extern crate http;
 
 pub use sessions::Sessions;
 pub use sessionstore::SessionStore;
-pub use sessionstore::store::Session;
+pub use sessionstore::session::Session;
+// pub use sessionstore::hashsession::HashSession;
 
 pub mod sessions;
 pub mod sessionstore;

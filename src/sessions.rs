@@ -77,3 +77,43 @@ impl<K, V, S: SessionStore<K, V> + Clone> Middleware for Sessions<K, V, S> {
         Continue
     }
 }
+
+#[cfg(test)]
+mod test {
+    pub use super::*;
+    pub use super::super::sessionstore::*;
+    pub use super::super::sessionstore::store::*;
+    pub use iron::*;
+    pub use iron::middleware::*;
+    pub use std::sync::{Arc, Mutex};
+    pub use std::mem::uninitialized;
+
+    pub fn get_session_id(_: &Request, _: &Alloy) -> char {'a'}
+
+    pub fn check_session_char_char(_: &mut Request, _: &mut Response, alloy: &mut Alloy) {
+        let _ = alloy.find::<Session<char, char>>().unwrap();
+    }
+    pub fn check_session_char_u32(_: &mut Request, _: &mut Response, alloy: &mut Alloy) {
+        let _ = alloy.find::<Session<char, u32>>().unwrap();
+    }
+
+    mod enter {
+        use super::*;
+
+        #[test]
+        fn handles_multiple_sessions() {
+            let mut test_server: ServerT = Iron::new();
+            test_server.link(Sessions::new(get_session_id, Session::<char, char>::new()));
+            test_server.link(Sessions::new(get_session_id, Session::<char, u32>::new()));
+            test_server.link(check_session_char_char);
+            test_server.link(check_session_char_u32);
+            unsafe {
+                let _ = test_server.chain.dispatch(
+                    uninitialized(),
+                    uninitialized(),
+                    None
+                );
+            }
+        }
+    }
+}

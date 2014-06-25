@@ -104,7 +104,7 @@ mod test {
 
     pub fn set_server() -> ServerT {
         let mut test_server: ServerT = Iron::new();
-        test_server.link(Sessions::new(get_session_id, HashSessionStore::<char, char>::new()));
+        test_server.chain.link(Sessions::new(get_session_id, HashSessionStore::<char, char>::new()));
         test_server
     }
     pub fn run_server(mut server: ServerT) {
@@ -158,15 +158,15 @@ mod test {
         #[test]
         fn starts_with_empty_session() {
             let mut test_server = set_server();
-            test_server.link(check_session_is_not_set);
+            test_server.chain.link(check_session_is_not_set);
             run_server(test_server);
         }
 
         #[test]
         fn finds_session() {
             let mut test_server = set_server();
-            test_server.link(set_session_to_a);
-            test_server.link(check_session_is_set_to_a);
+            test_server.chain.link(set_session_to_a);
+            test_server.chain.link(check_session_is_set_to_a);
             run_server(test_server);
         }
 
@@ -176,17 +176,17 @@ mod test {
             #[test]
             fn swaps_session_when_empty() {
                 let mut test_server = set_server();
-                test_server.link(swap_session_to_b);
-                test_server.link(check_session_is_set_to_b);
+                test_server.chain.link(swap_session_to_b);
+                test_server.chain.link(check_session_is_set_to_b);
                 run_server(test_server);
             }
 
             #[test]
             fn swaps_session_when_non_empty() {
                 let mut test_server = set_server();
-                test_server.link(set_session_to_a);
-                test_server.link(swap_session_to_b);
-                test_server.link(check_session_is_set_to_b);
+                test_server.chain.link(set_session_to_a);
+                test_server.chain.link(swap_session_to_b);
+                test_server.chain.link(check_session_is_set_to_b);
                 run_server(test_server);
             }
 
@@ -194,9 +194,9 @@ mod test {
             #[test]
             fn swaps_session_when_same_valued() {
                 let mut test_server = set_server();
-                test_server.link(set_session_to_b);
-                test_server.link(swap_session_to_b);
-                test_server.link(check_session_is_set_to_b);
+                test_server.chain.link(set_session_to_b);
+                test_server.chain.link(swap_session_to_b);
+                test_server.chain.link(check_session_is_set_to_b);
                 run_server(test_server);
             }
         }
@@ -207,17 +207,17 @@ mod test {
             #[test]
             fn inserts_session_when_empty() {
                 let mut test_server = set_server();
-                test_server.link(upsert_session);
-                test_server.link(check_session_is_set_to_b);
+                test_server.chain.link(upsert_session);
+                test_server.chain.link(check_session_is_set_to_b);
                 run_server(test_server);
             }
 
             #[test]
             fn mutates_session_when_non_empty() {
                 let mut test_server = set_server();
-                test_server.link(set_session_to_b);
-                test_server.link(upsert_session);
-                test_server.link(check_session_is_set_to_a);
+                test_server.chain.link(set_session_to_b);
+                test_server.chain.link(upsert_session);
+                test_server.chain.link(check_session_is_set_to_a);
                 run_server(test_server);
             }
         }
@@ -225,10 +225,10 @@ mod test {
         #[test]
         fn removes_session() {
             let mut test_server = set_server();
-            test_server.link(set_session_to_a);
-            test_server.link(check_session_is_set_to_a);
-            test_server.link(remove_session);
-            test_server.link(check_session_is_not_set);
+            test_server.chain.link(set_session_to_a);
+            test_server.chain.link(check_session_is_set_to_a);
+            test_server.chain.link(remove_session);
+            test_server.chain.link(check_session_is_not_set);
             run_server(test_server);
         }
     }

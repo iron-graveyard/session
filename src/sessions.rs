@@ -100,10 +100,10 @@ mod test {
         #[test]
         fn handles_multiple_sessions() {
             let mut test_server: ServerT = Iron::new();
-            test_server.link(Sessions::new(get_session_id, HashSessionStore::<char, char>::new()));
-            test_server.link(Sessions::new(get_session_id, HashSessionStore::<char, u32>::new()));
-            test_server.link(check_session_char_char);
-            test_server.link(check_session_char_u32);
+            test_server.chain.link(Sessions::new(get_session_id, HashSessionStore::<char, char>::new()));
+            test_server.chain.link(Sessions::new(get_session_id, HashSessionStore::<char, u32>::new()));
+            test_server.chain.link(check_session_char_char);
+            test_server.chain.link(check_session_char_u32);
             unsafe {
                 let _ = test_server.chain.dispatch(
                     uninitialized(),

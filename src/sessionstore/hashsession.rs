@@ -13,30 +13,27 @@ type Store<K, V> = RWLock<HashMap<K, RWLock<V>>>;
 /// #### To use:
 /// ```ignore
 /// // When defining your server:
-/// server.link(Sessions::new(key_gen_fn, Session::<KeyType, ValueType>::new()));
+/// server.link(Sessions::new(key_gen_fn, HashSessionStore::<KeyType, ValueType>::new()));
 ///
 /// // When accessing from your middleware:
 /// let session = alloy.find_mut::<Session<KeyType, ValueType>>().unwrap();
 /// ```
-pub struct Session<K, V>{
-    key: Option<K>,
+pub struct HashSessionStore<K, V>{
     store: Arc<Store<K, V>>
 }
 
-impl<K: Clone + Send, V: Send> Clone for Session<K, V> {
-    fn clone(&self) -> Session<K, V> {
-        Session {
-            key: self.key.clone(),
+impl<K: Clone + Send, V: Send> Clone for HashSessionStore<K, V> {
+    fn clone(&self) -> HashSessionStore<K, V> {
+        HashSessionStore {
             store: self.store.clone()
         }
     }
 }
 
-impl<K: Hash + Eq + Send + Share, V: Send + Share> Session<K, V> {
+impl<K: Hash + Eq + Send + Share, V: Send + Share> HashSessionStore<K, V> {
     /// Create a new instance of the session store
-    pub fn new() -> Session<K, V> {
-        Session {
-            key: None,
+    pub fn new() -> HashSessionStore<K, V> {
+        HashSessionStore {
             store: Arc::new(RWLock::new(HashMap::<K, RWLock<V>>::new()))
         }
     }
@@ -50,25 +47,21 @@ impl<K: Hash + Eq + Send + Share, V: Send + Share> Session<K, V> {
  *
  * Instead, all values returned are copies.
  */
-impl<K: Hash + Eq + Send + Share + Clone, V: Send + Share + Clone> SessionStore<K, V> for Session<K, V> {
-    fn select_session(&mut self, key: K) { self.key = Some(key); }
-    fn insert(&self, val: V) {
-        let key = self.key.as_ref().unwrap();
+impl<K: Hash + Eq + Send + Share + Clone, V: Send + Share + Clone> SessionStore<K, V> for HashSessionStore<K, V> {
+    fn insert(&self, key: &K, val: V) {
         // Avoid a WriteLock if possible
         if !self.store.read().contains_key(key) {
             // Inserting consumes a key => clone()
             self.store.write().insert(key.clone(), RWLock::new(val));
         }
     }
-    fn find(&self) -> Option<V> {
-        let key = self.key.as_ref().unwrap();
+    fn find(&self, key: &K) -> Option<V> {
         match self.store.read().find(key) {
             Some(lock) => Some(lock.read().clone()),
             None => None
         }
     }
-    fn swap(&self, value: V) -> Option<V> {
-        let key = self.key.as_ref().unwrap();
+    fn swap(&self, key: &K, value: V) -> Option<V> {
         match self.store.read().find(key) {
             // Instead of using swap, which requires a write lock on the HashMap,
             // only take the write locks when the key does not yet exist
@@ -79,11 +72,10 @@ impl<K: Hash + Eq + Send + Share + Clone, V: Send + Share + Clone> SessionStore<
             },
             None => ()
         }
-        self.insert(value);
+        self.insert(key, value);
         None
     }
-    fn upsert(&self, value: V, mutator: |&mut V|) -> V {
-        let key = self.key.as_ref().unwrap();
+    fn upsert(&self, key: &K, value: V, mutator: |&mut V|) -> V {
         match self.store.read().find(key) {
             Some(lock) => {
                 let old_v = &mut *lock.write();
@@ -92,11 +84,10 @@ impl<K: Hash + Eq + Send + Share + Clone, V: Send + Share + Clone> SessionStore<
             },
             None => ()
         }
-        self.insert(value.clone());
+        self.insert(key, value.clone());
         value
     }
-    fn remove(&self) -> bool {
-        let key = self.key.as_ref().unwrap();
+    fn remove(&self, key: &K) -> bool {
         self.store.write().remove(key)
     }
 }
@@ -105,6 +96,7 @@ impl<K: Hash + Eq + Send + Share + Clone, V: Send + Share + Clone> SessionStore<
 mod test {
     pub use super::*;
     pub use super::super::*;
+    pub use super::super::session::*;
     pub use super::super::super::sessions::*;
     pub use iron::*;
     pub use iron::middleware::*;
@@ -112,7 +104,7 @@ mod test {
 
     pub fn set_server() -> ServerT {
         let mut test_server: ServerT = Iron::new();
-        test_server.link(Sessions::new(get_session_id, Session::<char, char>::new()));
+        test_server.chain.link(Sessions::new(get_session_id, HashSessionStore::<char, char>::new()));
         test_server
     }
     pub fn run_server(mut server: ServerT) {
@@ -166,15 +158,15 @@ mod test {
         #[test]
         fn starts_with_empty_session() {
             let mut test_server = set_server();
-            test_server.link(check_session_is_not_set);
+            test_server.chain.link(check_session_is_not_set);
             run_server(test_server);
         }
 
         #[test]
         fn finds_session() {
             let mut test_server = set_server();
-            test_server.link(set_session_to_a);
-            test_server.link(check_session_is_set_to_a);
+            test_server.chain.link(set_session_to_a);
+            test_server.chain.link(check_session_is_set_to_a);
             run_server(test_server);
         }
 
@@ -184,17 +176,17 @@ mod test {
             #[test]
             fn swaps_session_when_empty() {
                 let mut test_server = set_server();
-                test_server.link(swap_session_to_b);
-                test_server.link(check_session_is_set_to_b);
+                test_server.chain.link(swap_session_to_b);
+                test_server.chain.link(check_session_is_set_to_b);
                 run_server(test_server);
             }
 
             #[test]
             fn swaps_session_when_non_empty() {
                 let mut test_server = set_server();
-                test_server.link(set_session_to_a);
-                test_server.link(swap_session_to_b);
-                test_server.link(check_session_is_set_to_b);
+                test_server.chain.link(set_session_to_a);
+                test_server.chain.link(swap_session_to_b);
+                test_server.chain.link(check_session_is_set_to_b);
                 run_server(test_server);
             }
 
@@ -202,9 +194,9 @@ mod test {
             #[test]
             fn swaps_session_when_same_valued() {
                 let mut test_server = set_server();
-                test_server.link(set_session_to_b);
-                test_server.link(swap_session_to_b);
-                test_server.link(check_session_is_set_to_b);
+                test_server.chain.link(set_session_to_b);
+                test_server.chain.link(swap_session_to_b);
+                test_server.chain.link(check_session_is_set_to_b);
                 run_server(test_server);
             }
         }
@@ -215,17 +207,17 @@ mod test {
             #[test]
             fn inserts_session_when_empty() {
                 let mut test_server = set_server();
-                test_server.link(upsert_session);
-                test_server.link(check_session_is_set_to_b);
+                test_server.chain.link(upsert_session);
+                test_server.chain.link(check_session_is_set_to_b);
                 run_server(test_server);
             }
 
             #[test]
             fn mutates_session_when_non_empty() {
                 let mut test_server = set_server();
-                test_server.link(set_session_to_b);
-                test_server.link(upsert_session);
-                test_server.link(check_session_is_set_to_a);
+                test_server.chain.link(set_session_to_b);
+                test_server.chain.link(upsert_session);
+                test_server.chain.link(check_session_is_set_to_a);
                 run_server(test_server);
             }
         }
@@ -233,10 +225,10 @@ mod test {
         #[test]
         fn removes_session() {
             let mut test_server = set_server();
-            test_server.link(set_session_to_a);
-            test_server.link(check_session_is_set_to_a);
-            test_server.link(remove_session);
-            test_server.link(check_session_is_not_set);
+            test_server.chain.link(set_session_to_a);
+            test_server.chain.link(check_session_is_set_to_a);
+            test_server.chain.link(remove_session);
+            test_server.chain.link(check_session_is_not_set);
             run_server(test_server);
         }
     }

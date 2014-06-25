@@ -61,19 +61,15 @@ impl<K, V, S: SessionStore<K, V>> Sessions<K, V, S> {
     }
 }
 
-impl<K, V, S: SessionStore<K, V> + Clone> Middleware for Sessions<K, V, S> {
+impl<K: 'static, V, S: SessionStore<K, V> + Clone> Middleware for Sessions<K, V, S> {
     /// Adds the session store to the `alloy`.
     fn enter(&mut self, req: &mut Request, _: &mut Response,
              alloy: &mut Alloy) -> Status {
-        // Generate and store the key for this session.
-        let mut session = self.session_store.clone();
-        session.select_session((self.key_generator)(req, alloy));
+        // Retrieve the session for this request
+        let session = self.session_store.select_session((self.key_generator)(req, alloy));
 
-        // Add _all_ session store to the alloy.
-        //     Anything added to the alloy must fulfill 'static,
-        //     so we can't get to _this_ session under a ReadLockGuard.
+        // Store this session in the alloy
         alloy.insert(session);
-
         Continue
     }
 }
@@ -82,7 +78,8 @@ impl<K, V, S: SessionStore<K, V> + Clone> Middleware for Sessions<K, V, S> {
 mod test {
     pub use super::*;
     pub use super::super::sessionstore::*;
-    pub use super::super::sessionstore::store::*;
+    pub use super::super::sessionstore::session::*;
+    pub use super::super::sessionstore::hashsession::*;
     pub use iron::*;
     pub use iron::middleware::*;
     pub use std::sync::{Arc, Mutex};
@@ -103,10 +100,10 @@ mod test {
         #[test]
         fn handles_multiple_sessions() {
             let mut test_server: ServerT = Iron::new();
-            test_server.link(Sessions::new(get_session_id, Session::<char, char>::new()));
-            test_server.link(Sessions::new(get_session_id, Session::<char, u32>::new()));
-            test_server.link(check_session_char_char);
-            test_server.link(check_session_char_u32);
+            test_server.chain.link(Sessions::new(get_session_id, HashSessionStore::<char, char>::new()));
+            test_server.chain.link(Sessions::new(get_session_id, HashSessionStore::<char, u32>::new()));
+            test_server.chain.link(check_session_char_char);
+            test_server.chain.link(check_session_char_u32);
             unsafe {
                 let _ = test_server.chain.dispatch(
                     uninitialized(),

@@ -5,13 +5,13 @@ pub mod store;
 
 /// This `Trait` defines a session storage struct. It must be implemented on any store passed to `Sessions`.
 ///
-/// A key is set using `set_key` when the `Session` middleware is first called.
+/// `select_session` is called for each request to select the session.
 ///
-/// All of the remaining methods act on the specific session
-/// selected by that key. This isolates sessions to a specific request.
+/// All of the remaining methods act on that session.
+/// This isolates requests to a specific session.
 pub trait SessionStore<K, V>: Send {
-    /// Set the key to identify a unique session.
-    fn set_key(&mut self, key: K);
+    /// Select the session with a key, given by the `key_generator` function.
+    fn select_session(&mut self, key: K);
     /// Set the value of this session, replacing any previously set value.
     fn insert(&self, value: V);
     /// Retrieve the value of this session.

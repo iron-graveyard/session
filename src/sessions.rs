@@ -1,10 +1,10 @@
 //! Sessioning middleware
 //!
-//! Instantiating and linking a new `Sessions` struct will
-//! give your server session functionality.
+//! Instantiate and link a new `Sessions` struct to
+//! give your server sessioning functionality.
 //!
-//! Functionality can be customized with key-generating functions
-//! (to differentiate sessions) and custom stores.
+//! Key-generating functions and custom stores can be used
+//! to customize functionality.
 
 use iron::{Request, Response, Middleware, Alloy};
 use iron::middleware::{Status, Continue};
@@ -65,13 +65,14 @@ impl<K, V, S: SessionStore<K, V> + Clone> Middleware for Sessions<K, V, S> {
     /// Adds the session store to the `alloy`.
     fn enter(&mut self, req: &mut Request, _: &mut Response,
              alloy: &mut Alloy) -> Status {
-        // Generate and store the key for this session
-        self.session_store.set_key((self.key_generator)(req, alloy));
+        // Generate and store the key for this session.
+        let mut session = self.session_store.clone();
+        session.select_session((self.key_generator)(req, alloy));
 
-        // Add _all_ session store to the alloy
+        // Add _all_ session store to the alloy.
         //     Anything added to the alloy must fulfill 'static,
-        //     so we can't get to _this_ session under a ReadLockGuard
-        alloy.insert(self.session_store.clone());
+        //     so we can't get to _this_ session under a ReadLockGuard.
+        alloy.insert(session);
 
         Continue
     }

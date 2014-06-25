@@ -4,11 +4,9 @@
 
 //! Session-storage middleware for the [Iron](https://ironframework.io/) web framework.
 //!
-//! New sessioning middleware can be made with the `sessions` module.
+//! The `sessions` module is used to create new sessioning middleware.
 //!
-//! A default implementation of a session store is provided in the `sessionstore` module.
-//!
-//! All module structs and types can be access through the crate, using type synonmyms.
+//! `sessionstore` provides a default implementation of a session store.
 
 extern crate collections;
 extern crate core;

@@ -52,7 +52,7 @@ impl<K: Hash + Eq + Send + Share, V: Send + Share> Session<K, V> {
  * Instead, all values returned are copies.
  */
 impl<K: Hash + Eq + Send + Share + Clone, V: Send + Share + Clone> SessionStore<K, V> for Session<K, V> {
-    fn set_key(&mut self, key: K) { self.key = Some(key); }
+    fn select_session(&mut self, key: K) { self.key = Some(key); }
     fn insert(&self, val: V) {
         let key = self.key.as_ref().unwrap();
         // Avoid a WriteLock if possible

@@ -1,6 +1,7 @@
 #![crate_id = "session"]
 #![deny(missing_doc)]
 #![feature(phase)]
+#![feature(globs)]
 
 //! Session-storage middleware for the [Iron](https://ironframework.io/) web framework.
 //!

@@ -1,5 +1,4 @@
-use std::sync::Arc;
-use std::sync::RWLock;
+use std::sync::{Arc, RWLock};
 use std::collections::HashMap;
 use collections::hash::Hash;
 use core::cmp::Eq;
@@ -76,13 +75,12 @@ impl<K: Hash + Eq + Send + Share + Clone, V: Send + Share + Clone> SessionStore<
             Some(lock) => {
                 let old_v = lock.read().clone();
                 *lock.write() = value;
-                Some(old_v)
+                return Some(old_v)
             },
-            None       => {
-                self.insert(value);
-                None
-            }
+            None => ()
         }
+        self.insert(value);
+        None
     }
     fn upsert(&self, value: V, mutator: |&mut V|) -> V {
         let key = self.key.as_ref().unwrap();
@@ -90,16 +88,156 @@ impl<K: Hash + Eq + Send + Share + Clone, V: Send + Share + Clone> SessionStore<
             Some(lock) => {
                 let old_v = &mut *lock.write();
                 mutator(old_v);
-                old_v.clone()
+                return old_v.clone()
             },
-            None => {
-                self.insert(value.clone());
-                value
-            }
+            None => ()
         }
+        self.insert(value.clone());
+        value
     }
     fn remove(&self) -> bool {
         let key = self.key.as_ref().unwrap();
         self.store.write().remove(key)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    pub use super::*;
+    pub use super::super::*;
+    pub use super::super::super::sessions::*;
+    pub use iron::*;
+    pub use iron::middleware::*;
+    pub use std::mem::uninitialized;
+
+    pub fn set_server() -> ServerT {
+        let mut test_server: ServerT = Iron::new();
+        test_server.link(Sessions::new(get_session_id, Session::<char, char>::new()));
+        test_server
+    }
+    pub fn run_server(mut server: ServerT) {
+        unsafe {
+            let _ = server.chain.dispatch(
+                uninitialized(),
+                uninitialized(),
+                None
+            );
+        }
+    }
+
+    pub fn get_session_id(_: &Request, _: &Alloy) -> char {'a'}
+
+    pub fn set_session_to_a(_: &mut Request, _: &mut Response, alloy: &mut Alloy) {
+        let session = alloy.find::<Session<char, char>>().unwrap();
+        session.insert('a');
+    }
+    pub fn set_session_to_b(_: &mut Request, _: &mut Response, alloy: &mut Alloy) {
+        let session = alloy.find::<Session<char, char>>().unwrap();
+        session.insert('b');
+    }
+    pub fn swap_session_to_b(_: &mut Request, _: &mut Response, alloy: &mut Alloy) {
+        let session = alloy.find::<Session<char, char>>().unwrap();
+        session.swap('b');
+    }
+    pub fn upsert_session(_: &mut Request, _: &mut Response, alloy: &mut Alloy) {
+        let session = alloy.find::<Session<char, char>>().unwrap();
+        let _ = session.upsert('b', |c: &mut char| *c = 'a');
+    }
+    pub fn remove_session(_: &mut Request, _: &mut Response, alloy: &mut Alloy) {
+        let session = alloy.find::<Session<char, char>>().unwrap();
+        session.remove();
+    }
+    pub fn check_session_is_not_set(_: &mut Request, _: &mut Response, alloy: &mut Alloy) {
+        let session = alloy.find::<Session<char, char>>().unwrap();
+        assert_eq!(session.find(), None)
+    }
+    pub fn check_session_is_set_to_a(_: &mut Request, _: &mut Response, alloy: &mut Alloy) {
+        let session = alloy.find::<Session<char, char>>().unwrap();
+        assert_eq!(session.find(), Some('a'))
+    }
+    pub fn check_session_is_set_to_b(_: &mut Request, _: &mut Response, alloy: &mut Alloy) {
+        let session = alloy.find::<Session<char, char>>().unwrap();
+        assert_eq!(session.find(), Some('b'))
+    }
+
+    mod enter {
+        pub use super::*;
+
+        #[test]
+        fn starts_with_empty_session() {
+            let mut test_server = set_server();
+            test_server.link(check_session_is_not_set);
+            run_server(test_server);
+        }
+
+        #[test]
+        fn finds_session() {
+            let mut test_server = set_server();
+            test_server.link(set_session_to_a);
+            test_server.link(check_session_is_set_to_a);
+            run_server(test_server);
+        }
+
+        mod swap {
+            use super::*;
+
+            #[test]
+            fn swaps_session_when_empty() {
+                let mut test_server = set_server();
+                test_server.link(swap_session_to_b);
+                test_server.link(check_session_is_set_to_b);
+                run_server(test_server);
+            }
+
+            #[test]
+            fn swaps_session_when_non_empty() {
+                let mut test_server = set_server();
+                test_server.link(set_session_to_a);
+                test_server.link(swap_session_to_b);
+                test_server.link(check_session_is_set_to_b);
+                run_server(test_server);
+            }
+
+
+            #[test]
+            fn swaps_session_when_same_valued() {
+                let mut test_server = set_server();
+                test_server.link(set_session_to_b);
+                test_server.link(swap_session_to_b);
+                test_server.link(check_session_is_set_to_b);
+                run_server(test_server);
+            }
+        }
+
+        mod upsert {
+            use super::*;
+
+            #[test]
+            fn inserts_session_when_empty() {
+                let mut test_server = set_server();
+                test_server.link(upsert_session);
+                test_server.link(check_session_is_set_to_b);
+                run_server(test_server);
+            }
+
+            #[test]
+            fn mutates_session_when_non_empty() {
+                let mut test_server = set_server();
+                test_server.link(set_session_to_b);
+                test_server.link(upsert_session);
+                test_server.link(check_session_is_set_to_a);
+                run_server(test_server);
+            }
+        }
+
+        #[test]
+        fn removes_session() {
+            let mut test_server = set_server();
+            test_server.link(set_session_to_a);
+            test_server.link(check_session_is_set_to_a);
+            test_server.link(remove_session);
+            test_server.link(check_session_is_not_set);
+            run_server(test_server);
+        }
     }
 }

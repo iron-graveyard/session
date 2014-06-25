@@ -1,6 +1,9 @@
+//! This exposes `Session`, the struct stored in the `Alloy`.
+
 use std::sync::Arc;
 use super::SessionStore;
 
+/// A session which provides basic CRUD operations.
 pub struct Session<K, V> {
     key: K,
     arc: Arc<Box<SessionStore<K, V> + 'static>>

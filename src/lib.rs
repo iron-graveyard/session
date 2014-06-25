@@ -1,5 +1,5 @@
 #![crate_id = "session"]
-// #![deny(missing_doc)]
+#![deny(missing_doc)]
 #![feature(phase)]
 #![feature(globs)]
 

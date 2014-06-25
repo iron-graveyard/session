@@ -9,7 +9,6 @@
 use iron::{Request, Response, Middleware, Alloy};
 use iron::middleware::{Status, Continue};
 use super::sessionstore::SessionStore;
-use super::sessionstore::session::Session;
 
 /// The sessioning middleware.
 ///

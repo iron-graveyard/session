@@ -5,12 +5,14 @@ use self::session::Session;
 pub mod session;
 
 /// A default implementation of `SessionStore`: `Session`.
-// pub mod hashsession;
+pub mod hashsession;
 
 /// This `Trait` defines a session storage struct. It must be implemented on any store passed to `Sessions`.
-pub trait SessionStore<K, V>: Send {
+pub trait SessionStore<K, V>: Clone + Send + Share {
     #[doc(hidden)]
-    fn select_session(&mut self, key: K) -> Session<K, V>;
+    fn select_session(&mut self, key: K) -> Session<K, V> {
+        Session::new(key, box self.clone())
+    }
     /// Set the value of the session belonging to `key`, replacing any previously set value.
     fn insert(&self, key: &K, value: V);
     /// Retrieve the value of this session.

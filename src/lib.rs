@@ -17,7 +17,7 @@ extern crate http;
 pub use sessions::Sessions;
 pub use sessionstore::SessionStore;
 pub use sessionstore::session::Session;
-// pub use sessionstore::hashsession::HashSession;
+pub use sessionstore::hashsession::HashSessionStore;
 
 pub mod sessions;
 pub mod sessionstore;

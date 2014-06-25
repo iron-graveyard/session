@@ -96,6 +96,7 @@ impl<K: Hash + Eq + Send + Share + Clone, V: Send + Share + Clone> SessionStore<
 mod test {
     pub use super::*;
     pub use super::super::*;
+    pub use super::super::session::*;
     pub use super::super::super::sessions::*;
     pub use iron::*;
     pub use iron::middleware::*;
@@ -103,7 +104,7 @@ mod test {
 
     pub fn set_server() -> ServerT {
         let mut test_server: ServerT = Iron::new();
-        test_server.link(Sessions::new(get_session_id, Session::<char, char>::new()));
+        test_server.link(Sessions::new(get_session_id, HashSessionStore::<char, char>::new()));
         test_server
     }
     pub fn run_server(mut server: ServerT) {

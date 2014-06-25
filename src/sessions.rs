@@ -78,7 +78,8 @@ impl<K: 'static, V, S: SessionStore<K, V> + Clone> Middleware for Sessions<K, V,
 mod test {
     pub use super::*;
     pub use super::super::sessionstore::*;
-    pub use super::super::sessionstore::store::*;
+    pub use super::super::sessionstore::session::*;
+    pub use super::super::sessionstore::hashsession::*;
     pub use iron::*;
     pub use iron::middleware::*;
     pub use std::sync::{Arc, Mutex};
@@ -99,8 +100,8 @@ mod test {
         #[test]
         fn handles_multiple_sessions() {
             let mut test_server: ServerT = Iron::new();
-            test_server.link(Sessions::new(get_session_id, Session::<char, char>::new()));
-            test_server.link(Sessions::new(get_session_id, Session::<char, u32>::new()));
+            test_server.link(Sessions::new(get_session_id, HashSessionStore::<char, char>::new()));
+            test_server.link(Sessions::new(get_session_id, HashSessionStore::<char, u32>::new()));
             test_server.link(check_session_char_char);
             test_server.link(check_session_char_u32);
             unsafe {

@@ -1,8 +1,12 @@
 #![crate_id = "session"]
-// #![deny(missing_doc)]
+#![deny(missing_doc)]
 #![feature(phase)]
 
-//! Session-storage middleware for the [Iron](https://www.github.com/iron/iron) web framework.
+//! Session-storage middleware for the [Iron](https://ironframework.io/) web framework.
+//!
+//! The `sessions` module is used to create new sessioning middleware.
+//!
+//! `sessionstore` provides a default implementation of a session store.
 
 extern crate collections;
 extern crate core;

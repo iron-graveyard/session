@@ -119,37 +119,45 @@ mod test {
 
     pub fn get_session_id(_: &Request, _: &Alloy) -> char {'a'}
 
-    pub fn set_session_to_a(_: &mut Request, _: &mut Response, alloy: &mut Alloy) {
+    pub fn set_session_to_a(_: &mut Request, _: &mut Response, alloy: &mut Alloy) -> Status {
         let session = alloy.find::<Session<char, char>>().unwrap();
         session.insert('a');
+        Continue
     }
-    pub fn set_session_to_b(_: &mut Request, _: &mut Response, alloy: &mut Alloy) {
+    pub fn set_session_to_b(_: &mut Request, _: &mut Response, alloy: &mut Alloy) -> Status {
         let session = alloy.find::<Session<char, char>>().unwrap();
         session.insert('b');
+        Continue
     }
-    pub fn swap_session_to_b(_: &mut Request, _: &mut Response, alloy: &mut Alloy) {
+    pub fn swap_session_to_b(_: &mut Request, _: &mut Response, alloy: &mut Alloy) -> Status {
         let session = alloy.find::<Session<char, char>>().unwrap();
         session.swap('b');
+        Continue
     }
-    pub fn upsert_session(_: &mut Request, _: &mut Response, alloy: &mut Alloy) {
+    pub fn upsert_session(_: &mut Request, _: &mut Response, alloy: &mut Alloy) -> Status {
         let session = alloy.find::<Session<char, char>>().unwrap();
         let _ = session.upsert('b', |c: &mut char| *c = 'a');
+        Continue
     }
-    pub fn remove_session(_: &mut Request, _: &mut Response, alloy: &mut Alloy) {
+    pub fn remove_session(_: &mut Request, _: &mut Response, alloy: &mut Alloy) -> Status {
         let session = alloy.find::<Session<char, char>>().unwrap();
         session.remove();
+        Continue
     }
-    pub fn check_session_is_not_set(_: &mut Request, _: &mut Response, alloy: &mut Alloy) {
+    pub fn check_session_is_not_set(_: &mut Request, _: &mut Response, alloy: &mut Alloy) -> Status {
         let session = alloy.find::<Session<char, char>>().unwrap();
         assert_eq!(session.find(), None)
+        Continue
     }
-    pub fn check_session_is_set_to_a(_: &mut Request, _: &mut Response, alloy: &mut Alloy) {
+    pub fn check_session_is_set_to_a(_: &mut Request, _: &mut Response, alloy: &mut Alloy) -> Status {
         let session = alloy.find::<Session<char, char>>().unwrap();
         assert_eq!(session.find(), Some('a'))
+        Continue
     }
-    pub fn check_session_is_set_to_b(_: &mut Request, _: &mut Response, alloy: &mut Alloy) {
+    pub fn check_session_is_set_to_b(_: &mut Request, _: &mut Response, alloy: &mut Alloy) -> Status {
         let session = alloy.find::<Session<char, char>>().unwrap();
         assert_eq!(session.find(), Some('b'))
+        Continue
     }
 
     mod enter {
@@ -158,15 +166,15 @@ mod test {
         #[test]
         fn starts_with_empty_session() {
             let mut test_server = set_server();
-            test_server.chain.link(check_session_is_not_set);
+            test_server.chain.link(FromFn::new(check_session_is_not_set));
             run_server(test_server);
         }
 
         #[test]
         fn finds_session() {
             let mut test_server = set_server();
-            test_server.chain.link(set_session_to_a);
-            test_server.chain.link(check_session_is_set_to_a);
+            test_server.chain.link(FromFn::new(set_session_to_a));
+            test_server.chain.link(FromFn::new(check_session_is_set_to_a));
             run_server(test_server);
         }
 
@@ -176,17 +184,17 @@ mod test {
             #[test]
             fn swaps_session_when_empty() {
                 let mut test_server = set_server();
-                test_server.chain.link(swap_session_to_b);
-                test_server.chain.link(check_session_is_set_to_b);
+                test_server.chain.link(FromFn::new(swap_session_to_b));
+                test_server.chain.link(FromFn::new(check_session_is_set_to_b));
                 run_server(test_server);
             }
 
             #[test]
             fn swaps_session_when_non_empty() {
                 let mut test_server = set_server();
-                test_server.chain.link(set_session_to_a);
-                test_server.chain.link(swap_session_to_b);
-                test_server.chain.link(check_session_is_set_to_b);
+                test_server.chain.link(FromFn::new(set_session_to_a));
+                test_server.chain.link(FromFn::new(swap_session_to_b));
+                test_server.chain.link(FromFn::new(check_session_is_set_to_b));
                 run_server(test_server);
             }
 
@@ -194,9 +202,9 @@ mod test {
             #[test]
             fn swaps_session_when_same_valued() {
                 let mut test_server = set_server();
-                test_server.chain.link(set_session_to_b);
-                test_server.chain.link(swap_session_to_b);
-                test_server.chain.link(check_session_is_set_to_b);
+                test_server.chain.link(FromFn::new(set_session_to_b));
+                test_server.chain.link(FromFn::new(swap_session_to_b));
+                test_server.chain.link(FromFn::new(check_session_is_set_to_b));
                 run_server(test_server);
             }
         }
@@ -207,17 +215,17 @@ mod test {
             #[test]
             fn inserts_session_when_empty() {
                 let mut test_server = set_server();
-                test_server.chain.link(upsert_session);
-                test_server.chain.link(check_session_is_set_to_b);
+                test_server.chain.link(FromFn::new(upsert_session));
+                test_server.chain.link(FromFn::new(check_session_is_set_to_b));
                 run_server(test_server);
             }
 
             #[test]
             fn mutates_session_when_non_empty() {
                 let mut test_server = set_server();
-                test_server.chain.link(set_session_to_b);
-                test_server.chain.link(upsert_session);
-                test_server.chain.link(check_session_is_set_to_a);
+                test_server.chain.link(FromFn::new(set_session_to_b));
+                test_server.chain.link(FromFn::new(upsert_session));
+                test_server.chain.link(FromFn::new(check_session_is_set_to_a));
                 run_server(test_server);
             }
         }
@@ -225,10 +233,10 @@ mod test {
         #[test]
         fn removes_session() {
             let mut test_server = set_server();
-            test_server.chain.link(set_session_to_a);
-            test_server.chain.link(check_session_is_set_to_a);
-            test_server.chain.link(remove_session);
-            test_server.chain.link(check_session_is_not_set);
+            test_server.chain.link(FromFn::new(set_session_to_a));
+            test_server.chain.link(FromFn::new(check_session_is_set_to_a));
+            test_server.chain.link(FromFn::new(remove_session));
+            test_server.chain.link(FromFn::new(check_session_is_not_set));
             run_server(test_server);
         }
     }

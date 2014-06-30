@@ -87,11 +87,13 @@ mod test {
 
     pub fn get_session_id(_: &Request, _: &Alloy) -> char {'a'}
 
-    pub fn check_session_char_char(_: &mut Request, _: &mut Response, alloy: &mut Alloy) {
+    pub fn check_session_char_char(_: &mut Request, _: &mut Response, alloy: &mut Alloy) -> Status {
         let _ = alloy.find::<Session<char, char>>().unwrap();
+        Continue
     }
-    pub fn check_session_char_u32(_: &mut Request, _: &mut Response, alloy: &mut Alloy) {
+    pub fn check_session_char_u32(_: &mut Request, _: &mut Response, alloy: &mut Alloy) -> Status {
         let _ = alloy.find::<Session<char, u32>>().unwrap();
+        Continue
     }
 
     mod enter {
@@ -102,8 +104,8 @@ mod test {
             let mut test_server: ServerT = Iron::new();
             test_server.chain.link(Sessions::new(get_session_id, HashSessionStore::<char, char>::new()));
             test_server.chain.link(Sessions::new(get_session_id, HashSessionStore::<char, u32>::new()));
-            test_server.chain.link(check_session_char_char);
-            test_server.chain.link(check_session_char_u32);
+            test_server.chain.link(FromFn::new(check_session_char_char));
+            test_server.chain.link(FromFn::new(check_session_char_u32));
             unsafe {
                 let _ = test_server.chain.dispatch(
                     uninitialized(),

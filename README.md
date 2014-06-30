@@ -6,27 +6,46 @@ session [![Build Status](https://secure.travis-ci.org/iron/session.png?branch=ma
 ## Example
 
 ```rust
-extern crate iron;
 extern crate http;
+extern crate iron;
+extern crate session;
+
+use std::io::net::ip::{SocketAddr, Ipv4Addr};
 use iron::{Iron, ServerT, Chain, Request, Response, Alloy};
+use iron::middleware::{Status, Continue, FromFn};
+use iron::mixin::Serve;
+use session::{Sessions, SessionStore, HashSessionStore, Session};
+
+// Echo the sessioned count to the client
+fn get_count(req: &mut Request, res: &mut Response, alloy: &mut Alloy) -> Status {
+    // Retrieve our session from the store
+    let session = alloy.find_mut::<Session<SocketAddr, u32>>().unwrap();
+    // Store or increase the sessioned count
+    let count = session.upsert(1u32, |v: &mut u32| { *v = *v + 1; } );
+
+    println!("{} hits from\t{}", count, req.remote_addr.unwrap())
+    let _ = res.serve(::http::status::Ok, format!("Sessioned count: {}", count).as_slice());
+
+    Continue
+}
 
 fn main() {
     let mut server: ServerT = Iron::new();
-    server.chain.link(hello_world); // Add middleware to the server's stack
-    server.listen(::std::io::net::ip::Ipv4Addr(127, 0, 0, 1), 3000);
+    server.chain.link(Sessions::new(id_from_socket_addr, HashSessionStore::<id_type, u32>::new()));
+    server.chain.link(FromFn::new(get_count));
+    server.listen(Ipv4Addr(127, 0, 0, 1), 3000);
 }
 
-fn hello_world(_: &mut Request, res: &mut Response, _: &mut Alloy) {
-    res.serve(::http::Ok, "Hello, world!");
-}
+fn id_generator(req: &Request, al: &Alloy) -> id_type { ... }
 ```
 
 ## Overview
 
 session is a part of Iron's [core bundle](https://github.com/iron/core).
 
-- ...
-- ...
+- Includes an implemented `HashMap`-based session store
+- Key sessions based on your own id generating function
+- Store and retrieve data to/from keyed sessions
 
 ## Installation
 

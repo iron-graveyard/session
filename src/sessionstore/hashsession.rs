@@ -99,15 +99,14 @@ mod test {
     pub use super::super::session::*;
     pub use super::super::super::sessions::*;
     pub use iron::*;
-    pub use iron::middleware::*;
     pub use std::mem::uninitialized;
 
-    pub fn set_server() -> ServerT {
-        let mut test_server: ServerT = Iron::new();
+    pub fn set_server() -> Server {
+        let mut test_server: Server = Iron::new();
         test_server.chain.link(Sessions::new(get_session_id, HashSessionStore::<char, char>::new()));
         test_server
     }
-    pub fn run_server(mut server: ServerT) {
+    pub fn run_server(mut server: Server) {
         unsafe {
             let _ = server.chain.dispatch(
                 uninitialized(),

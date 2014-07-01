@@ -6,8 +6,7 @@
 //! Key-generating functions and custom stores can be used
 //! to customize functionality.
 
-use iron::{Request, Response, Middleware, Alloy};
-use iron::middleware::{Status, Continue};
+use iron::{Request, Response, Middleware, Alloy, Status, Continue};
 use super::sessionstore::SessionStore;
 
 /// The sessioning middleware.
@@ -81,7 +80,6 @@ mod test {
     pub use super::super::sessionstore::session::*;
     pub use super::super::sessionstore::hashsession::*;
     pub use iron::*;
-    pub use iron::middleware::*;
     pub use std::sync::{Arc, Mutex};
     pub use std::mem::uninitialized;
 
@@ -101,7 +99,7 @@ mod test {
 
         #[test]
         fn handles_multiple_sessions() {
-            let mut test_server: ServerT = Iron::new();
+            let mut test_server: Server = Iron::new();
             test_server.chain.link(Sessions::new(get_session_id, HashSessionStore::<char, char>::new()));
             test_server.chain.link(Sessions::new(get_session_id, HashSessionStore::<char, u32>::new()));
             test_server.chain.link(FromFn::new(check_session_char_char));

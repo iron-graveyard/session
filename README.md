@@ -49,9 +49,9 @@ git = "https://github.com/iron/session.git"
 
 Otherwise, `cargo build`, and the rlib will be in your `target` directory.
 
-## [Documentation](http://docs.ironframework.io/core/session)
+## [Documentation](http://docs.ironframework.io/session)
 
-Along with the [online documentation](http://docs.ironframework.io/core/session),
+Along with the [online documentation](http://docs.ironframework.io/session),
 you can build a local copy with `make doc`.
 
 ## [Examples](/examples)

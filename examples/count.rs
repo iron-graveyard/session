@@ -3,8 +3,7 @@ extern crate iron;
 extern crate session;
 
 use std::io::net::ip::{SocketAddr, Ipv4Addr};
-use iron::{Iron, Server, Chain, Request, Response, Alloy, Status, Continue, FromFn};
-use iron::mixin::Serve;
+use iron::{Iron, Server, Chain, Request, Response, Alloy, Status, Continue, Unwind, FromFn};
 use session::{Sessions, SessionStore, HashSessionStore, Session};
 
 // Echo the sessioned count to the client
@@ -20,10 +19,13 @@ fn get_count(req: &mut Request, res: &mut Response, alloy: &mut Alloy) -> Status
     Continue
 }
 
+fn stop(_: &mut Request, _: &mut Response, _: &mut Alloy) -> Status { Unwind }
+
 fn main() {
     let mut server: Server = Iron::new();
     server.chain.link(Sessions::new(id_from_socket_addr, HashSessionStore::<SocketAddr, u32>::new()));
     server.chain.link(FromFn::new(get_count));
+    server.chain.link(FromFn::new(stop));
     server.listen(Ipv4Addr(127, 0, 0, 1), 3000);
 }
 

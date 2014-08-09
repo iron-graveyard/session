@@ -6,7 +6,7 @@
 //! Key-generating functions and custom stores can be used
 //! to customize functionality.
 
-use iron::{Request, Response, Middleware, Alloy, Status, Continue};
+use iron::{Request, Response, Middleware, Status, Continue};
 use super::sessionstore::SessionStore;
 
 /// The sessioning middleware.
@@ -26,7 +26,7 @@ use super::sessionstore::SessionStore;
 /// Usually, keys are stored in signed cookies, but anything
 /// retrievable from `Request` or `Alloy` will work.
 pub struct Sessions<K, V, S> {
-    key_generator: fn(&Request, &Alloy) -> K,
+    key_generator: fn(&Request) -> K,
     session_store: S
 }
 
@@ -51,7 +51,7 @@ impl<K, V, S: SessionStore<K, V>> Sessions<K, V, S> {
     ///
     /// `session_store` must implement the `SessionStore` trait.
     /// A default `Session` is provided to fulfill this.
-    pub fn new(key_generator: fn(&Request, &Alloy) -> K,
+    pub fn new(key_generator: fn(&Request) -> K,
                store: S) -> Sessions<K, V, S> {
         Sessions {
             key_generator: key_generator,
@@ -62,13 +62,12 @@ impl<K, V, S: SessionStore<K, V>> Sessions<K, V, S> {
 
 impl<K: 'static, V, S: SessionStore<K, V> + Clone> Middleware for Sessions<K, V, S> {
     /// Adds the session store to the `alloy`.
-    fn enter(&mut self, req: &mut Request, _: &mut Response,
-             alloy: &mut Alloy) -> Status {
+    fn enter(&mut self, req: &mut Request, _: &mut Response) -> Status {
         // Retrieve the session for this request
-        let session = self.session_store.select_session((self.key_generator)(req, alloy));
+        let session = self.session_store.select_session((self.key_generator)(req));
 
         // Store this session in the alloy
-        alloy.insert(session);
+        req.alloy.insert(session);
         Continue
     }
 }
@@ -80,17 +79,17 @@ mod test {
     pub use super::super::sessionstore::session::*;
     pub use super::super::sessionstore::hashsession::*;
     pub use iron::*;
+    pub use test::mock::{request, response};
     pub use std::sync::{Arc, Mutex};
-    pub use std::mem::uninitialized;
 
-    pub fn get_session_id(_: &Request, _: &Alloy) -> char {'a'}
+    pub fn get_session_id(_: &Request) -> char {'a'}
 
-    pub fn check_session_char_char(_: &mut Request, _: &mut Response, alloy: &mut Alloy) -> Status {
-        let _ = alloy.find::<Session<char, char>>().unwrap();
+    pub fn check_session_char_char(req: &mut Request, _: &mut Response) -> Status {
+        let _ = req.alloy.find::<Session<char, char>>().unwrap();
         Continue
     }
-    pub fn check_session_char_u32(_: &mut Request, _: &mut Response, alloy: &mut Alloy) -> Status {
-        let _ = alloy.find::<Session<char, u32>>().unwrap();
+    pub fn check_session_char_u32(req: &mut Request, _: &mut Response) -> Status {
+        let _ = req.alloy.find::<Session<char, u32>>().unwrap();
         Continue
     }
 
@@ -104,13 +103,9 @@ mod test {
             test_server.chain.link(Sessions::new(get_session_id, HashSessionStore::<char, u32>::new()));
             test_server.chain.link(FromFn::new(check_session_char_char));
             test_server.chain.link(FromFn::new(check_session_char_u32));
-            unsafe {
-                let _ = test_server.chain.dispatch(
-                    uninitialized(),
-                    uninitialized(),
-                    None
-                );
-            }
+            let _ = test_server.chain.dispatch(
+              &mut request::new(::http::method::Get, "localhost:3000"),
+              &mut response::new());
         }
     }
 }

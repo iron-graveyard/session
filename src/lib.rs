@@ -13,6 +13,8 @@ extern crate collections;
 extern crate core;
 extern crate iron;
 extern crate http;
+#[cfg(test)]
+extern crate test="iron-test";
 
 pub use sessions::Sessions;
 pub use sessionstore::SessionStore;

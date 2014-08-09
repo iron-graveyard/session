@@ -6,12 +6,12 @@ use super::SessionStore;
 /// A session which provides basic CRUD operations.
 pub struct Session<K, V> {
     key: K,
-    store: Arc<Box<SessionStore<K, V> + 'static + Send + Share>>
+    store: Arc<Box<SessionStore<K, V> + 'static + Send + Sync>>
 }
 
 impl<K, V> Session<K, V> {
     /// Create a new session
-    pub fn new(key: K, store: Box<SessionStore<K, V> + 'static + Send + Share>) -> Session<K, V> {
+    pub fn new(key: K, store: Box<SessionStore<K, V> + 'static + Send + Sync>) -> Session<K, V> {
         Session {
             key: key,
             store: Arc::new(store)

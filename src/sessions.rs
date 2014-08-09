@@ -6,7 +6,7 @@
 //! Key-generating functions and custom stores can be used
 //! to customize functionality.
 
-use iron::{Request, Response, Middleware, Alloy, Status, Continue};
+use iron::{Request, Response, Middleware, Status, Continue};
 use super::sessionstore::SessionStore;
 
 /// The sessioning middleware.
@@ -26,7 +26,7 @@ use super::sessionstore::SessionStore;
 /// Usually, keys are stored in signed cookies, but anything
 /// retrievable from `Request` or `Alloy` will work.
 pub struct Sessions<K, V, S> {
-    key_generator: fn(&Request, &Alloy) -> K,
+    key_generator: fn(&Request) -> K,
     session_store: S
 }
 
@@ -51,7 +51,7 @@ impl<K, V, S: SessionStore<K, V>> Sessions<K, V, S> {
     ///
     /// `session_store` must implement the `SessionStore` trait.
     /// A default `Session` is provided to fulfill this.
-    pub fn new(key_generator: fn(&Request, &Alloy) -> K,
+    pub fn new(key_generator: fn(&Request) -> K,
                store: S) -> Sessions<K, V, S> {
         Sessions {
             key_generator: key_generator,
@@ -62,13 +62,12 @@ impl<K, V, S: SessionStore<K, V>> Sessions<K, V, S> {
 
 impl<K: 'static, V, S: SessionStore<K, V> + Clone> Middleware for Sessions<K, V, S> {
     /// Adds the session store to the `alloy`.
-    fn enter(&mut self, req: &mut Request, _: &mut Response,
-             alloy: &mut Alloy) -> Status {
+    fn enter(&mut self, req: &mut Request, _: &mut Response) -> Status {
         // Retrieve the session for this request
-        let session = self.session_store.select_session((self.key_generator)(req, alloy));
+        let session = self.session_store.select_session((self.key_generator)(req));
 
         // Store this session in the alloy
-        alloy.insert(session);
+        req.alloy.insert(session);
         Continue
     }
 }

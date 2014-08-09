@@ -7,9 +7,9 @@ session [![Build Status](https://secure.travis-ci.org/iron/session.png?branch=ma
 
 ```rust
 // Echo the sessioned count to the client
-fn get_count(req: &mut Request, res: &mut Response, alloy: &mut Alloy) -> Status {
+fn get_count(req: &mut Request, res: &mut Response) -> Status {
     // Retrieve our session from the store
-    let session = alloy.find_mut::<Session<SocketAddr, u32>>().unwrap();
+    let session = req.alloy.find_mut::<Session<SocketAddr, u32>>().unwrap();
     // Store or increase the sessioned count
     let count = session.upsert(1u32, |v: &mut u32| { *v = *v + 1; } );
 
@@ -26,7 +26,7 @@ fn main() {
     server.listen(Ipv4Addr(127, 0, 0, 1), 3000);
 }
 
-fn id_generator(req: &Request, al: &Alloy) -> id_type { ... }
+fn id_generator(req: &Request) -> id_type { ... }
 ```
 
 ## Overview
@@ -52,7 +52,7 @@ Otherwise, `cargo build`, and the rlib will be in your `target` directory.
 ## [Documentation](http://docs.ironframework.io/session)
 
 Along with the [online documentation](http://docs.ironframework.io/session),
-you can build a local copy with `make doc`.
+you can build a local copy with `cargo doc`.
 
 ## [Examples](/examples)
 

@@ -3,13 +3,13 @@ extern crate iron;
 extern crate session;
 
 use std::io::net::ip::{SocketAddr, Ipv4Addr};
-use iron::{Iron, Server, Chain, Request, Response, Alloy, Status, Continue, Unwind, FromFn};
+use iron::{Iron, Server, Chain, Request, Response, Status, Continue, Unwind, FromFn};
 use session::{Sessions, SessionStore, HashSessionStore, Session};
 
 // Echo the sessioned count to the client
-fn get_count(req: &mut Request, res: &mut Response, alloy: &mut Alloy) -> Status {
+fn get_count(req: &mut Request, res: &mut Response) -> Status {
     // Retrieve our session from the store
-    let session = alloy.find_mut::<Session<SocketAddr, u32>>().unwrap();
+    let session = req.alloy.find_mut::<Session<SocketAddr, u32>>().unwrap();
     // Store or increase the sessioned count
     let count = session.upsert(1u32, |v: &mut u32| { *v = *v + 1; } );
 
@@ -19,7 +19,7 @@ fn get_count(req: &mut Request, res: &mut Response, alloy: &mut Alloy) -> Status
     Continue
 }
 
-fn stop(_: &mut Request, _: &mut Response, _: &mut Alloy) -> Status { Unwind }
+fn stop(_: &mut Request, _: &mut Response) -> Status { Unwind }
 
 fn main() {
     let mut server: Server = Iron::new();
@@ -29,6 +29,6 @@ fn main() {
     server.listen(Ipv4Addr(127, 0, 0, 1), 3000);
 }
 
-fn id_from_socket_addr(req: &Request, _: &Alloy) -> SocketAddr {
+fn id_from_socket_addr(req: &Request) -> SocketAddr {
     req.remote_addr.unwrap()
 }

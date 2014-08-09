@@ -30,7 +30,7 @@ impl<K: Clone + Send, V: Send> Clone for HashSessionStore<K, V> {
     }
 }
 
-impl<K: Hash + Eq + Send + Share, V: Send + Share> HashSessionStore<K, V> {
+impl<K: Hash + Eq + Send + Sync, V: Send + Sync> HashSessionStore<K, V> {
     /// Create a new instance of the session store
     pub fn new() -> HashSessionStore<K, V> {
         HashSessionStore {
@@ -47,7 +47,7 @@ impl<K: Hash + Eq + Send + Share, V: Send + Share> HashSessionStore<K, V> {
  *
  * Instead, all values returned are copies.
  */
-impl<K: Hash + Eq + Send + Share + Clone, V: Send + Share + Clone> SessionStore<K, V> for HashSessionStore<K, V> {
+impl<K: Hash + Eq + Send + Sync + Clone, V: Send + Sync + Clone> SessionStore<K, V> for HashSessionStore<K, V> {
     fn insert(&self, key: &K, val: V) {
         // Avoid a WriteLock if possible
         if !self.store.read().contains_key(key) {

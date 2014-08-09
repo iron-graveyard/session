@@ -79,17 +79,17 @@ mod test {
     pub use super::super::sessionstore::session::*;
     pub use super::super::sessionstore::hashsession::*;
     pub use iron::*;
+    pub use test::mock::{request, response};
     pub use std::sync::{Arc, Mutex};
-    pub use std::mem::uninitialized;
 
-    pub fn get_session_id(_: &Request, _: &Alloy) -> char {'a'}
+    pub fn get_session_id(_: &Request) -> char {'a'}
 
-    pub fn check_session_char_char(_: &mut Request, _: &mut Response, alloy: &mut Alloy) -> Status {
-        let _ = alloy.find::<Session<char, char>>().unwrap();
+    pub fn check_session_char_char(req: &mut Request, _: &mut Response) -> Status {
+        let _ = req.alloy.find::<Session<char, char>>().unwrap();
         Continue
     }
-    pub fn check_session_char_u32(_: &mut Request, _: &mut Response, alloy: &mut Alloy) -> Status {
-        let _ = alloy.find::<Session<char, u32>>().unwrap();
+    pub fn check_session_char_u32(req: &mut Request, _: &mut Response) -> Status {
+        let _ = req.alloy.find::<Session<char, u32>>().unwrap();
         Continue
     }
 
@@ -103,13 +103,9 @@ mod test {
             test_server.chain.link(Sessions::new(get_session_id, HashSessionStore::<char, u32>::new()));
             test_server.chain.link(FromFn::new(check_session_char_char));
             test_server.chain.link(FromFn::new(check_session_char_u32));
-            unsafe {
-                let _ = test_server.chain.dispatch(
-                    uninitialized(),
-                    uninitialized(),
-                    None
-                );
-            }
+            let _ = test_server.chain.dispatch(
+              &mut request::new(::http::method::Get, "localhost:3000"),
+              &mut response::new());
         }
     }
 }

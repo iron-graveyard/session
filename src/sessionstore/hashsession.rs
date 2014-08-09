@@ -99,7 +99,7 @@ mod test {
     pub use super::super::session::*;
     pub use super::super::super::sessions::*;
     pub use iron::*;
-    pub use std::mem::uninitialized;
+    pub use test::mock::{request, response};
 
     pub fn set_server() -> Server {
         let mut test_server: Server = Iron::new();
@@ -107,54 +107,50 @@ mod test {
         test_server
     }
     pub fn run_server(mut server: Server) {
-        unsafe {
-            let _ = server.chain.dispatch(
-                uninitialized(),
-                uninitialized(),
-                None
-            );
-        }
+        let _ = server.chain.dispatch(
+            &mut request::new(::http::method::Get, "localhost:3000"),
+            &mut response::new());
     }
 
-    pub fn get_session_id(_: &Request, _: &Alloy) -> char {'a'}
+    pub fn get_session_id(_: &Request) -> char {'a'}
 
-    pub fn set_session_to_a(_: &mut Request, _: &mut Response, alloy: &mut Alloy) -> Status {
-        let session = alloy.find::<Session<char, char>>().unwrap();
+    pub fn set_session_to_a(req: &mut Request, _: &mut Response) -> Status {
+        let session = req.alloy.find::<Session<char, char>>().unwrap();
         session.insert('a');
         Continue
     }
-    pub fn set_session_to_b(_: &mut Request, _: &mut Response, alloy: &mut Alloy) -> Status {
-        let session = alloy.find::<Session<char, char>>().unwrap();
+    pub fn set_session_to_b(req: &mut Request, _: &mut Response) -> Status {
+        let session = req.alloy.find::<Session<char, char>>().unwrap();
         session.insert('b');
         Continue
     }
-    pub fn swap_session_to_b(_: &mut Request, _: &mut Response, alloy: &mut Alloy) -> Status {
-        let session = alloy.find::<Session<char, char>>().unwrap();
+    pub fn swap_session_to_b(req: &mut Request, _: &mut Response) -> Status {
+        let session = req.alloy.find::<Session<char, char>>().unwrap();
         session.swap('b');
         Continue
     }
-    pub fn upsert_session(_: &mut Request, _: &mut Response, alloy: &mut Alloy) -> Status {
-        let session = alloy.find::<Session<char, char>>().unwrap();
+    pub fn upsert_session(req: &mut Request, _: &mut Response) -> Status {
+        let session = req.alloy.find::<Session<char, char>>().unwrap();
         let _ = session.upsert('b', |c: &mut char| *c = 'a');
         Continue
     }
-    pub fn remove_session(_: &mut Request, _: &mut Response, alloy: &mut Alloy) -> Status {
-        let session = alloy.find::<Session<char, char>>().unwrap();
+    pub fn remove_session(req: &mut Request, _: &mut Response) -> Status {
+        let session = req.alloy.find::<Session<char, char>>().unwrap();
         session.remove();
         Continue
     }
-    pub fn check_session_is_not_set(_: &mut Request, _: &mut Response, alloy: &mut Alloy) -> Status {
-        let session = alloy.find::<Session<char, char>>().unwrap();
+    pub fn check_session_is_not_set(req: &mut Request, _: &mut Response) -> Status {
+        let session = req.alloy.find::<Session<char, char>>().unwrap();
         assert_eq!(session.find(), None)
         Continue
     }
-    pub fn check_session_is_set_to_a(_: &mut Request, _: &mut Response, alloy: &mut Alloy) -> Status {
-        let session = alloy.find::<Session<char, char>>().unwrap();
+    pub fn check_session_is_set_to_a(req: &mut Request, _: &mut Response) -> Status {
+        let session = req.alloy.find::<Session<char, char>>().unwrap();
         assert_eq!(session.find(), Some('a'))
         Continue
     }
-    pub fn check_session_is_set_to_b(_: &mut Request, _: &mut Response, alloy: &mut Alloy) -> Status {
-        let session = alloy.find::<Session<char, char>>().unwrap();
+    pub fn check_session_is_set_to_b(req: &mut Request, _: &mut Response) -> Status {
+        let session = req.alloy.find::<Session<char, char>>().unwrap();
         assert_eq!(session.find(), Some('b'))
         Continue
     }

@@ -1,4 +1,4 @@
-session [![Build IronResult<()>](https://secure.travis-ci.org/iron/session.png?branch=master)](https://travis-ci.org/iron/session)
+session [![Build Status](https://secure.travis-ci.org/iron/session.png?branch=master)](https://travis-ci.org/iron/session)
 ====
 
 > Sessioning middleware for the [Iron](https://github.com/iron/iron) web framework.

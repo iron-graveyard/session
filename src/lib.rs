@@ -14,7 +14,8 @@ extern crate core;
 extern crate iron;
 extern crate http;
 #[cfg(test)]
-extern crate test="iron-test";
+extern crate "iron-test" as test;
+extern crate typemap;
 
 pub use sessions::Sessions;
 pub use sessionstore::SessionStore;

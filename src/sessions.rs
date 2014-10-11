@@ -6,7 +6,9 @@
 //! Key-generating functions and custom stores can be used
 //! to customize functionality.
 
-use iron::{Request, Response, Middleware, Status, Continue};
+use iron::{Request, BeforeMiddleware, IronResult };
+use typemap::Assoc;
+use sessionstore::session;
 use super::sessionstore::SessionStore;
 
 /// The sessioning middleware.
@@ -60,15 +62,21 @@ impl<K, V, S: SessionStore<K, V>> Sessions<K, V, S> {
     }
 }
 
-impl<K: 'static, V, S: SessionStore<K, V> + Clone> Middleware for Sessions<K, V, S> {
+/// Key for inserting a Session<K, V> in the request extensions.
+pub struct RequestSession;
+
+impl<K: 'static, V: 'static> Assoc<session::Session<K, V>> for RequestSession {}
+
+
+impl<K: 'static, V: 'static, S: SessionStore<K, V> + Clone> BeforeMiddleware for Sessions<K, V, S> {
     /// Adds the session store to the `alloy`.
-    fn enter(&mut self, req: &mut Request, _: &mut Response) -> Status {
+    fn before(&self, req: &mut Request) -> IronResult<()> {
         // Retrieve the session for this request
         let session = self.session_store.select_session((self.key_generator)(req));
 
         // Store this session in the alloy
-        req.alloy.insert(session);
-        Continue
+        req.extensions.insert::<RequestSession, session::Session<K,V>>(session);
+        Ok(())
     }
 }
 
@@ -84,28 +92,30 @@ mod test {
 
     pub fn get_session_id(_: &Request) -> char {'a'}
 
-    pub fn check_session_char_char(req: &mut Request, _: &mut Response) -> Status {
-        let _ = req.alloy.find::<Session<char, char>>().unwrap();
-        Continue
+    pub fn check_session_char_char(req: &mut Request) -> IronResult<()> {
+        let _ = req.extensions.find::<RequestSession, Session<char, char>>().unwrap();
+        Ok(())
     }
-    pub fn check_session_char_u32(req: &mut Request, _: &mut Response) -> Status {
-        let _ = req.alloy.find::<Session<char, u32>>().unwrap();
-        Continue
+    pub fn check_session_char_u32(req: &mut Request) -> IronResult<()> {
+        let _ = req.extensions.find::<RequestSession, Session<char, u32>>().unwrap();
+        Ok(())
     }
 
     mod enter {
         use super::*;
 
+        fn dummy(_: &mut Request) -> IronResult<Response> {
+            Ok(Response::new())
+        }
+
         #[test]
         fn handles_multiple_sessions() {
-            let mut test_server: Server = Iron::new();
-            test_server.chain.link(Sessions::new(get_session_id, HashSessionStore::<char, char>::new()));
-            test_server.chain.link(Sessions::new(get_session_id, HashSessionStore::<char, u32>::new()));
-            test_server.chain.link(FromFn::new(check_session_char_char));
-            test_server.chain.link(FromFn::new(check_session_char_u32));
-            let _ = test_server.chain.dispatch(
-              &mut request::new(::http::method::Get, "localhost:3000"),
-              &mut response::new());
+            let mut chain = ChainBuilder::new(dummy);
+            chain.link_before(Sessions::new(get_session_id, HashSessionStore::<char, char>::new()));
+            chain.link_before(Sessions::new(get_session_id, HashSessionStore::<char, u32>::new()));
+            chain.link_before(check_session_char_char);
+            chain.link_before(check_session_char_u32);
+            let _ = Iron::new(chain).handler.call(&mut request::new(::http::method::Get, "localhost:3000"));
         }
     }
 }

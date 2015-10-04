@@ -3,7 +3,7 @@ env:
   - LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib/rustlib/x86_64-unknown-linux-gnu/lib/
 install:
   - curl https://static.rust-lang.org/rustup.sh > rustup.sh
-    sh rustup.sh --yes
+  - sh rustup.sh --yes
 script:
   - cargo build -v
   - cargo test -v

@@ -4,7 +4,7 @@ name = "session"
 version = "0.1.0"
 authors = ["Zach Pomerantz <zmp@umich.edu>"]
 
-[[lib]]
+[lib]
 
 name = "session"
 path = "src/lib.rs"

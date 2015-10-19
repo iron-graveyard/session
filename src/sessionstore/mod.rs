@@ -11,7 +11,7 @@ pub mod hashsession;
 pub trait SessionStore<K, V>: Clone + Send + Sync {
     #[doc(hidden)]
     fn select_session(&self, key: K) -> Session<K, V> {
-        Session::new(key, box self.clone())
+        Session::new(key, Box::new(self.clone()))
     }
     /// Set the value of the session belonging to `key`, replacing any previously set value.
     fn insert(&self, key: &K, value: V);
@@ -28,7 +28,7 @@ pub trait SessionStore<K, V>: Clone + Send + Sync {
     /// Returns an owned copy of the value that was set.
     ///
     /// This is analagous to the `insert_or_update_with` method of `HashMap`.
-    fn upsert(&self, key: &K, value: V, mutator: |&mut V|) -> V;
+    fn upsert(&self, key: &K, value: V, mutator: fn(&mut V)) -> V;
     /// Remove the session stored at this key.
     fn remove(&self, key: &K) -> bool;
 }

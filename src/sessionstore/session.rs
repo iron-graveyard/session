@@ -39,7 +39,7 @@ impl<K, V> Session<K, V> {
     /// Returns an owned copy of the set (current) value of this session.
     ///
     /// This is analagous to the `insert_or_update_with` method of `HashMap`.
-    pub fn upsert(&self, value: V, mutator: |&mut V|) -> V {
+    pub fn upsert(&self, value: V, mutator: fn(&mut V)) -> V {
         self.store.upsert(&self.key, value, mutator)
     }
     /// Remove the session stored at this key.

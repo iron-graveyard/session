@@ -1,10 +1,10 @@
-use std::sync::{Arc, RWLock};
+use std::sync::{Arc, RwLock};
 use std::collections::HashMap;
-use collections::hash::Hash;
+use std::hash::Hash;
 use core::cmp::Eq;
 use super::SessionStore;
 
-type Store<K, V> = RWLock<HashMap<K, RWLock<V>>>;
+type Store<K, V> = RwLock<HashMap<K, RwLock<V>>>;
 
 /// A default implementation of `SessionStore`.
 ///
@@ -34,14 +34,14 @@ impl<K: Hash + Eq + Send + Sync, V: Send + Sync> HashSessionStore<K, V> {
     /// Create a new instance of the session store
     pub fn new() -> HashSessionStore<K, V> {
         HashSessionStore {
-            store: Arc::new(RWLock::new(HashMap::<K, RWLock<V>>::new()))
+            store: Arc::new(RwLock::new(HashMap::<K, RwLock<V>>::new()))
         }
     }
 }
 
 /* A note on clones:
  *
- * Those values hidden behind a RWLock are owned behind that lock.
+ * Those values hidden behind a RwLock are owned behind that lock.
  * In order for them to be accessed, a reference to the two gating locks
  * (the HashMap and the keyed V) must be kept alive.
  *
@@ -52,7 +52,7 @@ impl<K: Hash + Eq + Send + Sync + Clone, V: Send + Sync + Clone> SessionStore<K,
         // Avoid a WriteLock if possible
         if !self.store.read().contains_key(key) {
             // Inserting consumes a key => clone()
-            self.store.write().insert(key.clone(), RWLock::new(val));
+            self.store.write().insert(key.clone(), RwLock::new(val));
         }
     }
     fn find(&self, key: &K) -> Option<V> {
@@ -75,7 +75,7 @@ impl<K: Hash + Eq + Send + Sync + Clone, V: Send + Sync + Clone> SessionStore<K,
         self.insert(key, value);
         None
     }
-    fn upsert(&self, key: &K, value: V, mutator: |&mut V|) -> V {
+    fn upsert(&self, key: &K, value: V, mutator: fn(&mut V)) -> V {
         match self.store.read().find(key) {
             Some(lock) => {
                 let old_v = &mut *lock.write();
@@ -116,8 +116,7 @@ mod test {
     }
 
     pub fn run_server(chain: ChainBuilder) {
-        let request = &mut request::new(::http::method::Get, "localhost:3000");
-        let _ = Iron::new(chain).handler.call(request);
+        let _ = Iron::new(chain).http("localhost:3000");
     }
 
     pub fn get_session_id(_: &Request) -> char {'a'}
@@ -149,17 +148,17 @@ mod test {
     }
     pub fn check_session_is_not_set(req: &mut Request) -> IronResult<()> {
         let session = req.extensions.find::<RequestSession, Session<char, char>>().unwrap();
-        assert_eq!(session.find(), None)
+        assert_eq!(session.find(), None);
         Ok(())
     }
     pub fn check_session_is_set_to_a(req: &mut Request) -> IronResult<()> {
         let session = req.extensions.find::<RequestSession, Session<char, char>>().unwrap();
-        assert_eq!(session.find(), Some('a'))
+        assert_eq!(session.find(), Some('a'));
         Ok(())
     }
     pub fn check_session_is_set_to_b(req: &mut Request) -> IronResult<()> {
         let session = req.extensions.find::<RequestSession, Session<char, char>>().unwrap();
-        assert_eq!(session.find(), Some('b'))
+        assert_eq!(session.find(), Some('b'));
         Ok(())
     }
 

@@ -6,8 +6,7 @@
 //! Key-generating functions and custom stores can be used
 //! to customize functionality.
 
-use iron::{Request, BeforeMiddleware, IronResult };
-use typemap::Assoc;
+use iron::{ Request, BeforeMiddleware, IronResult, typemap };
 use sessionstore::session;
 use super::sessionstore::SessionStore;
 
@@ -65,8 +64,8 @@ impl<K, V, S: SessionStore<K, V>> Sessions<K, V, S> {
 /// Key for inserting a Session<K, V> in the request extensions.
 pub struct RequestSession;
 
-impl<K: 'static, V: 'static> Assoc<session::Session<K, V>> for RequestSession {}
-
+//impl<K: 'static, V: 'static> Assoc<session::Session<K, V>> for RequestSession {}
+impl<K: 'static, V: 'static> typemap::Key for RequestSession { type Value = session::Session<K, V>; }
 
 impl<K: 'static, V: 'static, S: SessionStore<K, V> + Clone> BeforeMiddleware for Sessions<K, V, S> {
     /// Adds the session store to the `alloy`.
@@ -75,7 +74,7 @@ impl<K: 'static, V: 'static, S: SessionStore<K, V> + Clone> BeforeMiddleware for
         let session = self.session_store.select_session((self.key_generator)(req));
 
         // Store this session in the alloy
-        req.extensions.insert::<RequestSession, session::Session<K,V>>(session);
+        req.extensions.insert::<RequestSession>(session);
         Ok(())
     }
 }
@@ -115,7 +114,7 @@ mod test {
             chain.link_before(Sessions::new(get_session_id, HashSessionStore::<char, u32>::new()));
             chain.link_before(check_session_char_char);
             chain.link_before(check_session_char_u32);
-            let _ = Iron::new(chain).handler.call(&mut request::new(::http::method::Get, "localhost:3000"));
+            let _ = Iron::new(chain).http("localhost:3000");
         }
     }
 }

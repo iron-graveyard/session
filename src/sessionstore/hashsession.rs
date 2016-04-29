@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use std::hash::Hash;
 use core::cmp::Eq;
 use super::SessionStore;
+use iron::typemap;
 
 type Store<K, V> = RwLock<HashMap<K, RwLock<V>>>;
 
@@ -18,23 +19,23 @@ type Store<K, V> = RwLock<HashMap<K, RwLock<V>>>;
 /// // When accessing from your middleware:
 /// let session = alloy.find_mut::<Session<KeyType, ValueType>>().unwrap();
 /// ```
-pub struct HashSessionStore<K, V>{
-    store: Arc<Store<K, V>>
+pub struct HashSessionStore<K: typemap::Key>{
+    store: Arc<Store<K, K::Value>>
 }
 
-impl<K: Clone + Send, V: Send> Clone for HashSessionStore<K, V> {
-    fn clone(&self) -> HashSessionStore<K, V> {
+impl<K: typemap::Key> Clone for HashSessionStore<K> {
+    fn clone(&self) -> HashSessionStore<K> {
         HashSessionStore {
             store: self.store.clone()
         }
     }
 }
 
-impl<K: Hash + Eq + Send + Sync, V: Send + Sync> HashSessionStore<K, V> {
+impl<K: typemap::Key> HashSessionStore<K> {
     /// Create a new instance of the session store
-    pub fn new() -> HashSessionStore<K, V> {
+    pub fn new() -> HashSessionStore<K> {
         HashSessionStore {
-            store: Arc::new(RwLock::new(HashMap::<K, RwLock<V>>::new()))
+            store: Arc::new(RwLock::new(HashMap::<K, RwLock<K::Value>>::new()))
         }
     }
 }
@@ -47,21 +48,21 @@ impl<K: Hash + Eq + Send + Sync, V: Send + Sync> HashSessionStore<K, V> {
  *
  * Instead, all values returned are copies.
  */
-impl<K: Hash + Eq + Send + Sync + Clone, V: Send + Sync + Clone> SessionStore<K, V> for HashSessionStore<K, V> {
-    fn insert(&self, key: &K, val: V) {
+impl<K: typemap::Key> SessionStore<K> for HashSessionStore<K> where K: Send + Sync {
+    fn insert(&self, key: &K, val: K::Value) {
         // Avoid a WriteLock if possible
         if !self.store.read().unwrap().contains_key(key) {
             // Inserting consumes a key => clone()
             self.store.write().unwrap().insert(key.clone(), RwLock::new(val));
         }
     }
-    fn find(&self, key: &K) -> Option<V> {
+    fn find(&self, key: &K) -> Option<K::Value> {
         match self.store.read().unwrap().get(key) {
             Some(lock) => Some(lock.read().unwrap().clone()),
             None => None
         }
     }
-    fn swap(&self, key: &K, value: V) -> Option<V> {
+    fn swap(&self, key: &K, value: K::Value) -> Option<K::Value> {
         match self.store.read().unwrap().get(key) {
             // Instead of using swap, which requires a write lock on the HashMap,
             // only take the write locks when the key does not yet exist
@@ -75,7 +76,7 @@ impl<K: Hash + Eq + Send + Sync + Clone, V: Send + Sync + Clone> SessionStore<K,
         self.insert(key, value);
         None
     }
-    fn upsert(&self, key: &K, value: V, mutator: fn(&mut V)) -> V {
+    fn upsert(&self, key: &K, value: K::Value, mutator: fn(&mut K::Value)) -> K::Value {
         match self.store.read().unwrap().get(key) {
             Some(lock) => {
                 let old_v = &mut *lock.write().unwrap();

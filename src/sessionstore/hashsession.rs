@@ -31,7 +31,7 @@ impl<K: typemap::Key> Clone for HashSessionStore<K> {
     }
 }
 
-impl<K: typemap::Key> HashSessionStore<K> {
+impl<K: typemap::Key> HashSessionStore<K> where K: Eq + Hash {
     /// Create a new instance of the session store
     pub fn new() -> HashSessionStore<K> {
         HashSessionStore {
@@ -48,7 +48,7 @@ impl<K: typemap::Key> HashSessionStore<K> {
  *
  * Instead, all values returned are copies.
  */
-impl<K: typemap::Key> SessionStore<K> for HashSessionStore<K> where K: Send + Sync {
+impl<K: typemap::Key> SessionStore<K> for HashSessionStore<K> where K: Send + Sync + Eq + Hash + Clone, K::Value: Send + Sync + Clone {
     fn insert(&self, key: &K, val: K::Value) {
         // Avoid a WriteLock if possible
         if !self.store.read().unwrap().contains_key(key) {

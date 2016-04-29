@@ -9,6 +9,10 @@
 use iron::{ Request, BeforeMiddleware, IronResult, typemap };
 use sessionstore::session;
 use super::sessionstore::SessionStore;
+use std::any::Any;
+use std::boxed::Box;
+use std::marker::PhantomData;
+use std::marker::Reflect;
 
 /// The sessioning middleware.
 ///
@@ -26,13 +30,13 @@ use super::sessionstore::SessionStore;
 /// Session keys can be stored in the `Request` or `Alloy`.
 /// Usually, keys are stored in signed cookies, but anything
 /// retrievable from `Request` or `Alloy` will work.
-pub struct Sessions<K, V, S> {
+pub struct Sessions<K, S> {
     key_generator: fn(&Request) -> K,
     session_store: S
 }
 
-impl<K, V, S: SessionStore<K, V> + Clone> Clone for Sessions<K, V, S> {
-    fn clone(&self) -> Sessions<K, V, S> {
+impl<K, S: SessionStore<K, Box<Any>> + Clone> Clone for Sessions<K, S> {
+    fn clone(&self) -> Sessions<K, S> {
         Sessions {
             key_generator: self.key_generator,
             session_store: self.session_store.clone()
@@ -40,7 +44,7 @@ impl<K, V, S: SessionStore<K, V> + Clone> Clone for Sessions<K, V, S> {
     }
 }
 
-impl<K, V, S: SessionStore<K, V>> Sessions<K, V, S> {
+impl<K, S: SessionStore<K, Box<Any>>> Sessions<K, S> {
     /// Instantiate new sessioning middleware with the given
     /// key-generating function and session store.
     ///
@@ -53,7 +57,7 @@ impl<K, V, S: SessionStore<K, V>> Sessions<K, V, S> {
     /// `session_store` must implement the `SessionStore` trait.
     /// A default `Session` is provided to fulfill this.
     pub fn new(key_generator: fn(&Request) -> K,
-               store: S) -> Sessions<K, V, S> {
+               store: S) -> Sessions<K, S> {
         Sessions {
             key_generator: key_generator,
             session_store: store
@@ -62,19 +66,21 @@ impl<K, V, S: SessionStore<K, V>> Sessions<K, V, S> {
 }
 
 /// Key for inserting a Session<K, V> in the request extensions.
-pub struct RequestSession;
+pub struct RequestSession<K> {
+    phantom: PhantomData<K>
+}
 
 //impl<K: 'static, V: 'static> Assoc<session::Session<K, V>> for RequestSession {}
-impl<K: 'static, V: 'static> typemap::Key for RequestSession { type Value = session::Session<K, V>; }
+impl<K: 'static + Reflect> typemap::Key for RequestSession<K> { type Value = session::Session<K>; }
 
-impl<K: 'static, V: 'static, S: SessionStore<K, V> + Clone> BeforeMiddleware for Sessions<K, V, S> {
+impl<K: 'static + Reflect, S: SessionStore<K, Box<Any>> + 'static + Clone> BeforeMiddleware for Sessions<K, S> {
     /// Adds the session store to the `alloy`.
     fn before(&self, req: &mut Request) -> IronResult<()> {
         // Retrieve the session for this request
         let session = self.session_store.select_session((self.key_generator)(req));
 
         // Store this session in the alloy
-        req.extensions.insert::<RequestSession>(session);
+        req.extensions.insert::<RequestSession<K>>(session);
         Ok(())
     }
 }

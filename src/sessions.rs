@@ -72,7 +72,7 @@ pub struct RequestSession<K> {
 //impl<K: 'static, V: 'static> Assoc<session::Session<K, V>> for RequestSession {}
 impl<K: typemap::Key> typemap::Key for RequestSession<K> { type Value = session::Session<K>; }
 
-impl<K: typemap::Key, S: SessionStore<K> + 'static + Clone> BeforeMiddleware for Sessions<K, S> {
+impl<K: typemap::Key, S: SessionStore<K> + 'static + Clone + Send> BeforeMiddleware for Sessions<K, S> {
     /// Adds the session store to the `alloy`.
     fn before(&self, req: &mut Request) -> IronResult<()> {
         // Retrieve the session for this request

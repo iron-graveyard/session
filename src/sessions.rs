@@ -9,9 +9,7 @@
 use iron::{ Request, BeforeMiddleware, IronResult, typemap };
 use sessionstore::session;
 use super::sessionstore::SessionStore;
-use std::boxed::Box;
 use std::marker::PhantomData;
-use std::marker::Reflect;
 
 /// The sessioning middleware.
 ///

@@ -7,7 +7,6 @@
 //! `sessionstore` provides a default implementation of a session store.
 
 #![feature(collections)]
-#![feature(reflect_marker)]
 
 extern crate collections;
 extern crate core;

@@ -11,7 +11,7 @@ pub mod hashsession;
 /// This `Trait` defines a session storage struct. It must be implemented on any store passed to `Sessions`.
 pub trait SessionStore<K: typemap::Key>: Sync {
     #[doc(hidden)]
-    fn select_session(&mut self, key: K) -> Session<K> where Self: Send + Clone + 'static {
+    fn select_session(&self, key: K) -> Session<K> where Self: Send + Clone + 'static {
         Session::new(key, Box::new(self.clone()))
       }
     // fn select_session(&self, key: K) -> Session<K>

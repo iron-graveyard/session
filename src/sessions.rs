@@ -27,7 +27,7 @@ use std::marker::PhantomData;
 /// Session keys can be stored in the `Request` or `Alloy`.
 /// Usually, keys are stored in signed cookies, but anything
 /// retrievable from `Request` or `Alloy` will work.
-pub struct Sessions<K: typemap::Key, S> {
+pub struct Sessions<K: typemap::Key, S: SessionStore<K>> {
     key_generator: fn(&Request) -> K,
     session_store: S
 }

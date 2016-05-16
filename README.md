@@ -7,9 +7,9 @@ session [![Build Status](https://secure.travis-ci.org/iron/session.png?branch=ma
 
 ```rust
 // Echo the sessioned count to the client
-fn get_count(req: &mut Request, res: &mut Response) -> Status {
+fn get_count(req: &mut Request, res: &mut Response) -> IronResult<()> {
     // Retrieve our session from the store
-    let session = req.alloy.find_mut::<Session<SocketAddr, u32>>().unwrap();
+    let session = req.extensions.find_mut::<Session<SocketAddr, u32>>().unwrap();
     // Store or increase the sessioned count
     let count = session.upsert(1u32, |v: &mut u32| { *v = *v + 1; } );
 
@@ -20,9 +20,9 @@ fn get_count(req: &mut Request, res: &mut Response) -> Status {
 }
 
 fn main() {
-    let mut server: Server = Iron::new();
+    let mut server: Iron = Iron::new();
     server.chain.link(Sessions::new(id_from_socket_addr, HashSessionStore::<id_type, u32>::new()));
-    server.chain.link(FromFn::new(get_count));
+    server.chain.link(Chain::new(get_count));
     server.listen(Ipv4Addr(127, 0, 0, 1), 3000);
 }
 

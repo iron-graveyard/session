@@ -6,13 +6,8 @@
 //!
 //! `sessionstore` provides a default implementation of a session store.
 
-#![feature(collections)]
-
-extern crate collections;
 extern crate core;
 extern crate iron;
-#[cfg(test)]
-extern crate iron_test as test;
 
 pub use sessions::Sessions;
 pub use sessionstore::SessionStore;

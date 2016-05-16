@@ -10,8 +10,4 @@ name = "session"
 path = "src/lib.rs"
 
 [dependencies]
-iron = "*"
-
-[dependencies.iron-test]
-
-git = "https://github.com/reem/iron-test.git"
+iron = { version = "*" }

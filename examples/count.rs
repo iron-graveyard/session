@@ -1,34 +1,63 @@
-extern crate http;
+ #![allow(unused_must_use)]
+
 extern crate iron;
 extern crate session;
 
-use std::io::net::ip::{SocketAddr, Ipv4Addr};
-use iron::{Iron, Server, Chain, Request, Response, Status, Continue, Unwind, FromFn};
-use session::{Sessions, SessionStore, HashSessionStore, Session};
+use session::{Sessions, SessionStore, HashSessionStore};
+use session::sessions::RequestSession;
 
-// Echo the sessioned count to the client
-fn get_count(req: &mut Request, res: &mut Response) -> Status {
-    // Retrieve our session from the store
-    let session = req.alloy.find_mut::<Session<SocketAddr, u32>>().unwrap();
-    // Store or increase the sessioned count
-    let count = session.upsert(1u32, |v: &mut u32| { *v = *v + 1; } );
+use iron::{Request, Response, IronResult, Chain, Iron};
+use iron::typemap;
 
-    println!("{} hits from\t{}", count, req.remote_addr.unwrap())
-    let _ = res.serve(::http::status::Ok, format!("Sessioned count: {}", count).as_slice());
+fn handle_request(req: &mut Request) -> IronResult<Response> {
+    if req.url.path()[0] == "favicon.ico" {
+       Ok(Response::with((iron::status::Ok)))
+    } else {
+        // Retrieve our session from the store
+        let session = req.extensions.get_mut::<RequestSession<MySessionKey>>();
 
-    Continue
+        let mut count = 0;
+        match session {
+            None => {
+                println!("{}", "session has not been set yet!")
+            },
+            Some(v) => {
+                match v.find() {
+                    None => {
+                        count = v.upsert(1u32, count_func)
+                    },
+                    Some(v2) => {
+                        // Store or increase the sessioned count
+                        count = v.upsert(v2, count_func)
+                    }
+                }
+            },
+        }
+
+        println!("{} hits from\t{}", count, req.remote_addr);
+
+        Ok(Response::with((iron::status::Ok, format!("Sessioned count: {:?}", count))))
+    }
 }
 
-fn stop(_: &mut Request, _: &mut Response) -> Status { Unwind }
+fn count_func(v: &mut u32) {
+    *v = *v + 1
+}
+
+#[derive(PartialEq, Eq, Hash, Clone, Debug)]
+struct MySessionKey(u32);
+impl typemap::Key for MySessionKey { type Value = u32; }
+
+fn id_generator(_: &Request) -> MySessionKey {
+    MySessionKey(1u32)
+}
 
 fn main() {
-    let mut server: Server = Iron::new();
-    server.chain.link(Sessions::new(id_from_socket_addr, HashSessionStore::<SocketAddr, u32>::new()));
-    server.chain.link(FromFn::new(get_count));
-    server.chain.link(FromFn::new(stop));
-    server.listen(Ipv4Addr(127, 0, 0, 1), 3000);
-}
+    let mut chain = Chain::new(handle_request);
 
-fn id_from_socket_addr(req: &Request) -> SocketAddr {
-    req.remote_addr.unwrap()
+    let hs: HashSessionStore<MySessionKey> = HashSessionStore::new();
+    let s: Sessions<MySessionKey, HashSessionStore<MySessionKey>> = Sessions::new(id_generator, hs);
+    chain.link_before(s);
+    let server = Iron::new(chain);
+    server.http("localhost:3000");
 }

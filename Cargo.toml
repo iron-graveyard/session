@@ -4,15 +4,10 @@ name = "session"
 version = "0.1.0"
 authors = ["Zach Pomerantz <zmp@umich.edu>"]
 
-[[lib]]
+[lib]
 
 name = "session"
 path = "src/lib.rs"
 
-[dependencies.iron]
-
-git = "https://github.com/iron/iron.git"
-
-[dependencies.iron-test]
-
-git = "https://github.com/reem/iron-test.git"
+[dependencies]
+iron = { version = "*" }

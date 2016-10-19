@@ -1,4 +1,7 @@
-#![doc(html_logo_url = "https://avatars0.githubusercontent.com/u/7853871?s=128", html_favicon_url = "https://avatars0.githubusercontent.com/u/7853871?s=256", html_root_url = "http://ironframework.io/core/session")]
+#![crate_name = "session"]
+#![crate_type="lib"]
+#![doc(html_logo_url = "https://avatars0.githubusercontent.com/u/7853871?s=128")]
+#![doc(html_favicon_url = "https://avatars0.githubusercontent.com/u/7853871?s=256")]
 
 //! Session-storage middleware for the [Iron](https://ironframework.io/) web framework.
 //!

@@ -3,6 +3,7 @@
 name = "session"
 version = "0.1.0"
 authors = ["Zach Pomerantz <zmp@umich.edu>"]
+keywords = ["iron", "web", "http", "session"]
 
 [lib]
 

@@ -1,9 +1,11 @@
 [package]
 
 name = "session"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Zach Pomerantz <zmp@umich.edu>"]
 keywords = ["iron", "web", "http", "session"]
+license = "MIT"
+description = "A session middleware for Iron."
 
 [lib]
 

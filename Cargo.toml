@@ -10,4 +10,4 @@ name = "session"
 path = "src/lib.rs"
 
 [dependencies]
-iron = { version = "*" }
+iron = "0.4.0"

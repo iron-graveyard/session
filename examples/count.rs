@@ -1,5 +1,5 @@
  #![allow(unused_must_use)]
- 
+
 extern crate iron;
 extern crate session;
 
@@ -10,8 +10,8 @@ use iron::{Request, Response, IronResult, Chain, Iron};
 use iron::typemap;
 
 fn handle_request(req: &mut Request) -> IronResult<Response> {
-    if req.url.path[0] == "favicon.ico" {
-       Ok(Response::with((iron::status::Ok))) 
+    if req.url.path()[0] == "favicon.ico" {
+       Ok(Response::with((iron::status::Ok)))
     } else {
         // Retrieve our session from the store
         let session = req.extensions.get_mut::<RequestSession<MySessionKey>>();
@@ -30,7 +30,7 @@ fn handle_request(req: &mut Request) -> IronResult<Response> {
                         // Store or increase the sessioned count
                         count = v.upsert(v2, count_func)
                     }
-                }     
+                }
             },
         }
 
@@ -40,15 +40,15 @@ fn handle_request(req: &mut Request) -> IronResult<Response> {
     }
 }
 
-fn count_func(v: &mut u32) {  
-    *v = *v + 1 
+fn count_func(v: &mut u32) {
+    *v = *v + 1
 }
 
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
 struct MySessionKey(u32);
 impl typemap::Key for MySessionKey { type Value = u32; }
 
-fn id_generator(_: &Request) -> MySessionKey { 
+fn id_generator(_: &Request) -> MySessionKey {
     MySessionKey(1u32)
 }
 

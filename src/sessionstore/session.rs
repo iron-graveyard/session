@@ -10,6 +10,12 @@ pub struct Session<K: typemap::Key> {
     store: Arc<Box<SessionStore<K> + 'static + Send + Sync>>
 }
 
+impl<K: typemap::Key + Clone> Session<K> {
+    pub fn get_key(&self) -> K {
+        self.key.clone()
+    }
+}
+
 impl<K: typemap::Key> Session<K> {
     /// Create a new session
     pub fn new(key: K, store: Box<SessionStore<K> + 'static + Send + Sync>) -> Session<K> {
@@ -18,6 +24,7 @@ impl<K: typemap::Key> Session<K> {
             store: Arc::new(store)
         }
     }
+
     /// Set the value of this session, replacing any previously set value.
     pub fn insert(&self, value: K::Value) {
         self.store.insert(&self.key, value)
